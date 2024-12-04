@@ -127,19 +127,19 @@ def reflect_n(number:int, teta: float, thickness: np.ndarray, eps_re: np.ndarray
 
     
     # Propagation matrix
-    Pr = np.zeros((number-2, 2, 2), dtype=complex)
+    Pr = np.zeros((number-2, 2, 2), dtype=complex128)
 
     for i in range(Pr.shape[0]):
-        phase = 1j * (2 * np.pi ) * kz[i+1] * (thickness[i] / wavelength)
+        phase = (1j * (2 * np.pi ) * kz[i+1] / wavelength) *  thickness[i]
         print(phase)
         Pr[i] = np.diag([np.exp(-phase), np.exp(phase)])
 
 
     # Refraction matrix
-    Rfr = np.zeros((number-1, 2, 2), dtype=complex)
+    Rfr = np.zeros((number-1, 2, 2), dtype=complex128)
 
     for i in range(Rfr.shape[0]):
-        Rfr[i] = np.array([[1 / t[i], r[i] / t[i]], [r[i] / t[i], 1 / t[i]]])
+        Rfr[i] = np.array([[1 / t[i], r[i] / t[i]], [r[i] / t[i], 1 / t[i]]], dtype=np.complex128)
 
 
     S = Rfr[0]
@@ -147,7 +147,7 @@ def reflect_n(number:int, teta: float, thickness: np.ndarray, eps_re: np.ndarray
     print(f'kz{kz}\n r{r}\n t{t}\n Pr{Pr}\n Rfr{Rfr}\n')
 
     for i in range(number-2):
-        S = S@Pr[i]@Rfr[i+1]
+        S = S@(Pr[i]@Rfr[i+1])
         print(f'S2{Pr[i]@Rfr[i+1]}')
         print(f'S{S}')
 
