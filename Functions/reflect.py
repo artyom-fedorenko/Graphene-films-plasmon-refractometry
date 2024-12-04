@@ -130,7 +130,7 @@ def reflect_n(number:int, teta: float, thickness: np.ndarray, eps_re: np.ndarray
     Pr = np.zeros((number-2, 2, 2), dtype=complex)
 
     for i in range(Pr.shape[0]):
-        phase = 1j * (2 * np.pi ) * kz[i+1] * thickness[i] / wavelength
+        phase = 1j * (2 * np.pi ) * kz[i+1] * (thickness[i] / wavelength)
         print(phase)
         Pr[i] = np.diag([np.exp(-phase), np.exp(phase)])
 
