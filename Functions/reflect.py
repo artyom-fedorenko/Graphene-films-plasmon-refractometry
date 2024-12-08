@@ -177,8 +177,8 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
         Rfr = np.zeros((number-1, 2, 2), dtype=np.complex128)
 
         for i in range(Rfr.shape[0]):
-            Rfr[i] = np.array([[1, r[i]], [r[i], 1]], dtype=np.complex128)
-
+            Rfr[i] = np.array([[1, r[i]], [r[i], 1]], dtype=np.complex128)   
+ 
 
         S = Rfr[0]
 
