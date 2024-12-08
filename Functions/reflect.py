@@ -98,74 +98,108 @@ def reflect4(d_2, d_3, teta, eps3_re, eps3_im, eps4_re, eps4_im, wavelength = 19
     return R
 
 
-def reflect_n(number:int, teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np.ndarray, wavelength = 197*1e-6):
+
+
+"""
+Calculate the reflection coefficient of a layered medium using Fresnel coefficients 
+and transfer matrix formalism.
+
+Parameters:
+    number (int): Total number of layers (including incident and substrate layers).
+    teta (float): Angle of incidence in radians.
+    thickness (np.ndarray): Array of thicknesses for internal layers (length = number-2).
+    eps_re (np.ndarray): Array of real parts of permittivity (length = number).
+    eps_im (np.ndarray): Array of imaginary parts of permittivity (length = number).
+    wavelength (float): Wavelength of light in the same units as thickness.
+
+Returns:
+    float: Reflection coefficient (R).
+"""
+
+
+
+
+def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np.ndarray, wavelength = 197*1e-6) -> float:
+    
     
     assert len(thickness)+2 == len(eps_re) == len(eps_im), 'length does not match'
-    
 
+    if(teta < 0 or teta > np.pi/2):
+        raise ValueError("Incident angle out of range. Incident angle must be within (0, pi/2)") 
     
+    if np.any(thickness <= 0):
+        raise ValueError("Thickness must be more than zero")     
+
+    number = len(eps_re)  # number of layers
     eps = eps_re + eps_im*1j
 
-    # wave vectors
-    kz = np.zeros(number, dtype=complex)
-    kz[0] = np.sqrt(eps[0]) * np.cos(teta)
-
-    for i in range(number-1):
-        kz[i+1] = np.sqrt(eps[i+1] - eps[0] * np.sin(teta)**2)
-
-
-    # Fresnel coefficients
-    r = np.zeros(number-1, dtype=complex)
-    t = np.zeros(number-1, dtype=complex)
-
-    for i in range(len(r)):
-        r[i] = (eps[i+1] * kz[i] - eps[i] * kz[i+1]) / (eps[i+1] * kz[i] + eps[i] * kz[i+1])
-
-    for i in range(len(t)):
-        t[i] = 2 * kz[i] * np.sqrt(eps[i] * eps[i+1]) / (eps[i+1] * kz[i] + eps[i] * kz[i+1])
-
-
+    if (number == 2):
+        kz0 = np.sqrt(eps[0]) * np.cos(teta)
+        kz1 = np.sqrt(eps[1]-eps[0] * np.sin(teta))
+        r = (eps[1] * kz[0] - eps[0] * kz[1]) / (eps[1] * kz[0] + eps[0] * kz[1])
+        return abs(r**2)
     
-    # Propagation matrix
-    Pr = np.zeros((number-2, 2, 2), dtype=complex128)
+    if (number < 2):
+        raise ValueError ("At least 2 layers required.")
 
-    for i in range(Pr.shape[0]):
-        phase = (1j * (2 * np.pi ) * kz[i+1] / wavelength) *  thickness[i]
-        print(phase)
-        Pr[i] = np.diag([np.exp(-phase), np.exp(phase)])
+    if (number > 2):  
 
+        # wave vectors
+        kz = np.zeros(number, dtype=np.complex128)
+        kz[0] = np.sqrt(eps[0]) * np.cos(teta)
 
-    # Refraction matrix
-    Rfr = np.zeros((number-1, 2, 2), dtype=complex128)
-
-    for i in range(Rfr.shape[0]):
-        Rfr[i] = np.array([[1 / t[i], r[i] / t[i]], [r[i] / t[i], 1 / t[i]]], dtype=np.complex128)
+        for i in range(number-1):
+            kz[i+1] = np.sqrt(eps[i+1] - eps[0] * np.sin(teta)**2)
 
 
-    S = Rfr[0]
+        # Fresnel coefficients
+        r = np.zeros(number-1, dtype=np.complex128)
+        t = np.zeros(number-1, dtype=np.complex128)
 
-    print(f'kz{kz}\n r{r}\n t{t}\n Pr{Pr}\n Rfr{Rfr}\n')
+        for i in range(number - 1):
+            r[i] = (eps[i+1] * kz[i] - eps[i] * kz[i+1]) / (eps[i+1] * kz[i] + eps[i] * kz[i+1])
 
-    for i in range(number-2):
-        S = S@(Pr[i]@Rfr[i+1])
-        print(f'S2{Pr[i]@Rfr[i+1]}')
-        print(f'S{S}')
-
-    
-    # reflection coefficient
-    R = (np.abs(S[1, 0] / S[0, 0]))**2
-    return R
+        for i in range(number - 1):
+            t[i] = 2 * kz[i] * np.sqrt(eps[i] * eps[i+1]) / (eps[i+1] * kz[i] + eps[i] * kz[i+1])
 
 
 
+        # Propagation matrix
+        Pr = np.zeros((number-2, 2, 2), dtype=np.complex128)
 
-eps_re = np.array([2.34, 1, -17])
-eps_im = np.array([-0.0061, 0, 7])
-d = np.array([8*1e-5])
+        for i in range(Pr.shape[0]):
+            phase = (1j * (2 * np.pi ) * kz[i+1] / wavelength) *  thickness[i]
+        #    print(phase)
+            Pr[i] = np.diag([np.exp(-phase), np.exp(phase)])
 
-teta = 0.736
 
-R1 = reflect_n(3, teta, d, eps_re, eps_im)
-R2 = reflect3(d, teta, 2.34, -0.0061, 1, 0, -17, 7 )
+        # Refraction matrix
+        Rfr = np.zeros((number-1, 2, 2), dtype=np.complex128)
 
-print(R1, R2)
+        for i in range(Rfr.shape[0]):
+            Rfr[i] = np.array([[1, r[i]], [r[i], 1]], dtype=np.complex128)
+
+
+        S = Rfr[0]
+
+        #print(f'kz{kz}\n r{r}\n t{t}\n Pr{Pr}\n Rfr{Rfr}\n')
+
+        for i in range(number-2):
+            S = S@(Pr[i]@Rfr[i+1])
+            if np.any(np.isnan(S)):
+                raise ValueError("Overflow in matrix exponent, probably because of wrong units of d.")
+        #    print(f'S2{Pr[i]@Rfr[i+1]}')
+        #    print(f'S{S}')
+
+
+        # reflection coefficient
+        R = (np.abs(S[1, 0] / S[0, 0]))**2
+        return R
+
+
+
+
+
+
+
+
