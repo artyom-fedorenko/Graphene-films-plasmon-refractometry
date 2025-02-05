@@ -121,6 +121,81 @@ Warning: S is not a scattering matrix because 1/tij was eliminated for better co
 
 
 
+"""GPT-o3-mini-high reflectance function for fitting Fourier"""
+
+
+def reflectance_model(nu, n1_real, n1_imag):
+    """
+    Calculate the reflectance for a four–layer system at normal incidence:
+    
+      Air (n0) / Composite Graphene Film (n1, d1) / Polypropylene Film (n2, d2) / Air (n3)
+    
+    Parameters:
+      nu       : Wavenumber array [cm^-1]
+      n1_real  : Real part of the unknown refractive index of the composite graphene film
+      n1_imag  : Imaginary part of the unknown refractive index of the composite graphene film
+      
+    Returns:
+      R        : Reflectance (power reflection coefficient) as a function of nu.
+    """
+    # --- Known parameters ---
+    # Ambient and final medium (air)
+    n0 = 1.0
+    n3 = 1.0
+    
+    # Composite graphene film (unknown optical constants)
+    n1 = n1_real + 1j*n1_imag
+    d1 = 35e-7      # 35 nm in cm (1 nm = 1e-7 cm)
+    
+    # Polypropylene film (substrate)
+    n2 = 1.498 + 1j*(14.1e-4)
+    d2 = 40.5e-4    # 40.5 µm in cm (1 µm = 1e-4 cm)
+    
+    # --- Compute the phase thickness for each layer ---
+    # Note: nu is in cm^-1, and lambda = 1/nu.
+    delta1 = 2 * np.pi * n1 * d1 * nu   # For layer 1 (graphene film)
+    delta2 = 2 * np.pi * n2 * d2 * nu   # For layer 2 (polypropylene film)
+    
+    # --- Construct the 2x2 characteristic matrices for each layer ---
+    # For a given layer j with refractive index n_j and phase thickness delta_j, the matrix is:
+    #   M_j = [ cos(delta_j), i*sin(delta_j)/n_j ]
+    #         [ i*n_j*sin(delta_j), cos(delta_j)    ]
+    # 
+    # Layer 1:
+    M11_1 = np.cos(delta1)
+    M12_1 = 1j * np.sin(delta1) / n1
+    M21_1 = 1j * n1 * np.sin(delta1)
+    M22_1 = np.cos(delta1)
+    
+    # Layer 2:
+    M11_2 = np.cos(delta2)
+    M12_2 = 1j * np.sin(delta2) / n2
+    M21_2 = 1j * n2 * np.sin(delta2)
+    M22_2 = np.cos(delta2)
+    
+    # --- Total characteristic matrix ---
+    # For the two layers in series, the total matrix M = M1 * M2.
+    # For each nu (elementwise multiplication):
+    M11 = M11_1 * M11_2 + M12_1 * M21_2
+    M12 = M11_1 * M12_2 + M12_1 * M22_2
+    M21 = M21_1 * M11_2 + M22_1 * M21_2
+    M22 = M21_1 * M12_2 + M22_1 * M22_2
+    
+    # --- Reflection coefficient ---
+    # For a stack with total matrix M, the reflection amplitude is given by:
+    #   r = [(M11 + M12*n3)*n0 - (M21 + M22*n3)] / [(M11 + M12*n3)*n0 + (M21 + M22*n3)]
+    r_total = ((M11 + M12 * n3) * n0 - (M21 + M22 * n3)) / ((M11 + M12 * n3) * n0 + (M21 + M22 * n3))
+    
+    # Reflectance:
+    R = np.abs(r_total)**2
+    return R  # Return real values
+
+
+
+
+"""«You aren't gonna need it»"""
+
+
 
 def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np.ndarray, wavelength:float = 197*1e-6, polarization = 'p') -> float:
     
@@ -138,12 +213,12 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
 
     if (number == 2):
         kz0 = np.sqrt(eps[0]) * np.cos(teta)
-        kz1 = np.sqrt(eps[1]-eps[0] * np.sin(teta))
+        kz1 = np.sqrt(eps[1]-eps[0] * np.sin(teta)**2)
 
         if(polarization == 'p'):
-            r = (eps[1] * kz[0] - eps[0] * kz[1]) / (eps[1] * kz[0] + eps[0] * kz[1])
+            r = (eps[1] * kz0 - eps[0] * kz1) / (eps[1] * kz0 + eps[0] * kz1)
         if (polarization == 's'):
-            r = (kz[0] - kz[1]) / (kz[0] + kz[1])
+            r = (kz0 - kz1) / (kz0 + kz1)
 
         return abs(r**2)
     
@@ -162,7 +237,7 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
 
         # Fresnel coefficients
         r = np.zeros(number-1, dtype=np.complex128)
-        t = np.zeros(number-1, dtype=np.complex128)
+        t = np.zeros(number-1, dtype=np.complex128) # not used but may be in future
 
         if(polarization=='p'):    
             for i in range(number - 1):
@@ -187,7 +262,7 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
 
 
         # Refraction matrix
-        Rfr = np.zeros((number-1, 2, 2), dtype=np.complex128)
+        Rfr = np.ndarray((number-1, 2, 2), dtype=np.complex128)
 
         for i in range(Rfr.shape[0]):
             Rfr[i] = np.array([[1, r[i]], [r[i], 1]], dtype=np.complex128)   
@@ -212,7 +287,7 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
 
 
 
-
+print(abs(reflect_n(0, np.array([]), np.array([1, 10000000]), np.array([0, 0]), 22)))
 
 
 
