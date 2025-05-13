@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # d_2 - air gap, teta - internal incidence angle, eps_3 - permittivity of 3rd medium (InSb)
 def reflect3(d_2, teta, eps1_re, eps1_im, eps2_re, eps2_im,  eps3_re, eps3_im, wavelength = 197e-6):
 
-    n_1 = 1.531 - 1j * 0.002  # Complex refractive index of the prism (Zeonex)
+    n_1 = 1.531 + 1j * 0.002  # Complex refractive index of the prism (Zeonex)
     eps_1 = eps1_re + eps1_im*1j  # Dielectric permittivity of the prism (Zeonex)       
     eps_2 = eps2_re + eps2_im*1j  # Dielectric permittivity of air
     eps_3 = eps3_re + eps3_im*1j
@@ -32,7 +32,7 @@ def reflect3(d_2, teta, eps1_re, eps1_im, eps2_re, eps2_im,  eps3_re, eps3_im, w
 
     R = np.zeros(len(d_2))  # Initialize reflection coefficient array
 
-    print(f'kz{[kz_1, kz_2, kz_3]}\n r{[r_12, r_23]}\n t{[t_12, t_23]}\nRfr1 {S1}\n')
+    #print(f'kz{[kz_1, kz_2, kz_3]}\n r{[r_12, r_23]}\n t{[t_12, t_23]}\nRfr1 {S1}\n')
 
 
     for j in range(len(d_2)):
@@ -41,10 +41,10 @@ def reflect3(d_2, teta, eps1_re, eps1_im, eps2_re, eps2_im,  eps3_re, eps3_im, w
                     [r_23 * np.exp(1j * (2 * np.pi / wavelength) * kz_2 * d_2[j]) / t_23,
                         np.exp(1j * (2 * np.pi / wavelength) * kz_2 * d_2[j]) / t_23]], dtype=np.complex128)
         
-        print(f'S2{S2}')
+        #print(f'S2{S2}')
         
         S = np.dot(S1, S2)
-        print(f'S{S}')
+        #print(f'S{S}')
         R[j] = (np.abs(S[1, 0] / S[0, 0]))**2
 
     return R
@@ -55,7 +55,7 @@ def reflect3(d_2, teta, eps1_re, eps1_im, eps2_re, eps2_im,  eps3_re, eps3_im, w
 
 def reflect4(d_2, d_3, teta, eps3_re, eps3_im, eps4_re, eps4_im, wavelength = 197 * 10**(-6)): # teta - internal incidence angle,  d_2 - gap, d_3 - Gr, eps_re/im - gr
     
-    n_1 = 1.531 - 1j * 0.002  # Complex refractive index of the prism (Zeonex)
+    n_1 = 1.531 + 1j * 0.002  # Complex refractive index of the prism (Zeonex)
     eps_1 = n_1**2  # Dielectric permittivity of the prism (Zeonex)
     eps_2 = 1  #Dielectric permittivity of air"
     eps_3 = eps3_re+eps3_im*1j
@@ -116,7 +116,7 @@ Returns:
     float: Reflection coefficient (R).
 
 
-Warning: S is not a scattering matrix because 1/tij was eliminated for better computation!
+Warning: S is not a transfer matrix because 1/tij was eliminated for better computation!
 """
 
 
@@ -194,11 +194,14 @@ def reflectance_model(nu, n1_real, n1_imag):
 
 
 """«You aren't gonna need it»"""
-
+"""Удобнее было бы разбить на блоки-функции, вернуть словарик/список всего"""
+"""когерентное и некогерентное, назад и вперёд"""
 
 
 def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np.ndarray, wavelength:float = 197*1e-6, polarization = 'p') -> float:
-    
+    """
+    Calculate reflection coefficient of multilayered system of thin films.
+    """
 
     assert len(thickness)+2 == len(eps_re) == len(eps_im), 'length does not match'
 
@@ -287,8 +290,6 @@ def reflect_n(teta: float, thickness: np.ndarray, eps_re: np.ndarray, eps_im: np
 
 
 
-print(abs(reflect_n(0, np.array([]), np.array([1, 10000000]), np.array([0, 0]), 22)))
-
-
+#print(abs(reflect_n(0, np.array([]), np.array([1, 10000000]), np.array([0, 0]), 22)))
 
 
